@@ -1,20 +1,23 @@
 package tech.harrynull.h5mota.ui.views
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
@@ -79,122 +82,126 @@ fun TowerScreen(navController: NavHostController, tower: Tower) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .wrapContentHeight(),
-            color = MaterialTheme.colorScheme.surfaceDim
+                .wrapContentHeight()
         ) {
-            Column {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(tower.image)
-                        .crossfade(true)
-                        .placeholder(R.drawable.placeholder)
-                        .build(),
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    contentScale = ContentScale.FillWidth,
-                    contentDescription = null,
-                )
+            LazyColumn {
+                item {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(tower.image)
+                            .crossfade(true)
+                            .placeholder(R.drawable.placeholder)
+                            .build(),
+                        modifier = Modifier.fillMaxWidth(),
+                        contentScale = ContentScale.FillWidth,
+                        contentDescription = null,
+                    )
 
-                // on background
-                Column(modifier = Modifier.padding(32.dp)) {
-                    Text(text = tower.title, style = MaterialTheme.typography.headlineLarge)
-                    Row {
-                        Text(text = tower.author)
-                        tower.author2.takeIf { it.isNotBlank() }?.let {
-                            Text(text = " / $it")
-                        }
-                    }
-                    Row {
-                        SuggestionChip(
-                            onClick = {},
-                            label = { Text(text = "${tower.floors} 层") },
-                            enabled = false,
-                            modifier = Modifier.padding(end = 8.dp),
-                        )
-                        tower.tags.forEach { tag ->
-                            SuggestionChip(
-                                onClick = {},
-                                label = { Text(text = tag) },
-                                enabled = false,
-                                modifier = Modifier.padding(end = 8.dp),
-                            )
-                        }
-                    }
-                }
-                Card(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-                        .fillMaxWidth(),
-                    colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background)
-                ) {
-                    Column(Modifier.padding(32.dp)) {
-                        Text(text = tower.text)
-
-                        Row(
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                    // on background
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceDim,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .padding(32.dp)
                                 .padding(bottom = 16.dp)
                         ) {
-                            InfoCard(name = "通关人数", value = tower.win.toString())
-                            InfoCard(name = "精美", value = tower.thumb_up.toString())
-                            InfoCard(name = "难度", value = tower.difficultrate)
-                        }
-
-                        details?.let { details ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                            ) {
-                                BoxWithConstraints {
-                                    val availableWidth =
-                                        this@BoxWithConstraints.maxWidth.value.toInt() * 0.75
-                                    val resizedWidths = details.rating.map {
-                                        (it / details.rating.max()
-                                            .toFloat() * availableWidth).toInt()
-                                    }
-                                    Column(
-                                        modifier = Modifier
-                                            .padding(16.dp)
-                                            .fillMaxWidth()
-                                    ) {
-                                        listOf(
-                                            "极难",
-                                            "较难",
-                                            "一般",
-                                            "较易",
-                                            "极易"
-                                        ).mapIndexed { index, s ->
-                                            DifficultyBar(
-                                                s,
-                                                details.rating[index].toString(),
-                                                resizedWidths[index]
-                                            )
-                                        }
-                                    }
+                            Text(text = tower.title, style = MaterialTheme.typography.headlineLarge)
+                            Row {
+                                Text(text = tower.author)
+                                tower.author2.takeIf { it.isNotBlank() }?.let {
+                                    Text(text = " / $it")
+                                }
+                            }
+                            Row {
+                                SuggestionChip(
+                                    onClick = {},
+                                    label = { Text(text = "${tower.floors} 层") },
+                                    enabled = false,
+                                    modifier = Modifier.padding(end = 8.dp),
+                                )
+                                tower.tags.forEach { tag ->
+                                    SuggestionChip(
+                                        onClick = {},
+                                        label = { Text(text = tag) },
+                                        enabled = false,
+                                        modifier = Modifier.padding(end = 8.dp),
+                                    )
                                 }
                             }
                         }
+                    }
 
-                        Text(
-                            "Comments (${tower.comment})",
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.padding(top = 32.dp)
-                        )
+                    Box(modifier = Modifier.offset(y = (-32).dp)) {
+                        Card(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                                .fillMaxWidth(),
+                            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background)
+                        ) {
+                            Column(Modifier.padding(top = 32.dp, start = 32.dp, end = 32.dp)) {
+                                Text(text = tower.text)
 
-//                        LazyColumn {
-//                            details?.let { details ->
-//                                items(details.comments) { comment ->
-//                                    CommentCard(comment)
-//                                }
-//                            }
-//                        }
-                        details?.let { details ->
-                            details.comments.forEach { comment ->
-                                CommentCard(comment)
+                                Row(
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 16.dp)
+                                ) {
+                                    InfoCard(name = "通关人数", value = tower.win.toString())
+                                    InfoCard(name = "精美", value = tower.thumb_up.toString())
+                                    InfoCard(name = "难度", value = tower.difficultrate)
+                                }
+
+                                details?.let { details ->
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                    ) {
+                                        BoxWithConstraints {
+                                            val availableWidth =
+                                                this@BoxWithConstraints.maxWidth.value.toInt() * 0.75
+                                            val resizedWidths = details.rating.map {
+                                                (it / details.rating.max()
+                                                    .toFloat() * availableWidth).toInt()
+                                            }
+                                            Column(
+                                                modifier = Modifier
+                                                    .padding(16.dp)
+                                                    .fillMaxWidth()
+                                            ) {
+                                                listOf(
+                                                    "极难",
+                                                    "较难",
+                                                    "一般",
+                                                    "较易",
+                                                    "极易"
+                                                ).mapIndexed { index, s ->
+                                                    DifficultyBar(
+                                                        s,
+                                                        details.rating[index].toString(),
+                                                        resizedWidths[index]
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Text(
+                                    "Comments (${tower.comment})",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    modifier = Modifier.padding(top = 32.dp)
+                                )
                             }
                         }
+                    }
+                }
+
+                details?.let { details ->
+                    items(details.comments) { comment ->
+                        CommentCard(comment)
                     }
                 }
             }
@@ -220,7 +227,8 @@ fun DifficultyBar(description: String, value: String, width: Int) {
 @Composable
 fun InfoCard(name: String, value: String) {
     Card(
-        modifier = Modifier.padding(top = 16.dp),
+        modifier = Modifier
+            .padding(top = 16.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = name)
@@ -235,7 +243,11 @@ fun InfoCard(name: String, value: String) {
 
 @Composable
 fun CommentCard(comment: Comment) {
-    Column(Modifier.padding(vertical = 16.dp)) {
+    Column(
+        Modifier
+            .padding(vertical = 16.dp, horizontal = 32.dp)
+            .offset(y = (-16).dp)
+    ) {
         Row {
             AsyncImage(
                 model = comment.authorAvatar,
@@ -256,6 +268,10 @@ fun CommentCard(comment: Comment) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(text = comment.comment)
             }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        comment.replies.map {
+            CommentCard(comment = it)
         }
     }
 }
