@@ -5,22 +5,28 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -174,11 +180,51 @@ fun HomeScreen(navController: NavHostController) {
     ) {
         LazyColumn(state = listState) {
             item {
-                Text(
-                    "探索",
-                    style = MaterialTheme.typography.headlineMedium,
+                Row(
                     modifier = Modifier.padding(top = 32.dp, start = 16.dp)
-                )
+                ) {
+                    Text(
+                        "探索",
+                        style = MaterialTheme.typography.headlineMedium
+                    )
+                    // Sort mode
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .wrapContentSize(Alignment.TopStart)
+                    ) {
+                        var expanded by remember { mutableStateOf(false) }
+                        TextButton(
+                            onClick = { expanded = !expanded },
+                            modifier = Modifier.padding(start = 8.dp)
+                        ) {
+                            Text(
+                                sortMode.displayName,
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                            Icon(
+                                imageVector = Icons.Filled.ArrowDropDown,
+                                contentDescription = null
+                            )
+                        }
+                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            MotaApi.SortMode.entries.forEach { mode ->
+                                DropdownMenuItem(
+                                    onClick = {
+                                        sortMode = mode
+                                        expanded = false
+                                        scope.launch {
+                                            pagesLoaded = 0
+                                            load()
+                                        }
+                                    }, text = {
+                                        Text(mode.displayName)
+                                    })
+                            }
+                        }
+                    }
+                }
             }
             items(towers, key = { tower -> tower.name }) { tower ->
                 GameBox(navController, tower)
