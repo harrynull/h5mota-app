@@ -42,7 +42,7 @@ data class Comment(
 )
 
 @Serializable
-data class DetailedResponse(
+data class TowerDetails(
     val rating: List<Int>,
     val comments: List<Comment>
 )

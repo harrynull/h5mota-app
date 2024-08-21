@@ -19,11 +19,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
@@ -51,13 +55,13 @@ import nl.jacobras.humanreadable.HumanReadable
 import tech.harrynull.h5mota.R
 import tech.harrynull.h5mota.api.MotaApi
 import tech.harrynull.h5mota.models.Comment
-import tech.harrynull.h5mota.models.DetailedResponse
 import tech.harrynull.h5mota.models.Tower
+import tech.harrynull.h5mota.models.TowerDetails
 
 @Composable
 fun TowerScreen(navController: NavHostController, tower: Tower) {
     val scope = rememberCoroutineScope()
-    var details by remember { mutableStateOf<DetailedResponse?>(null) }
+    var details by remember { mutableStateOf<TowerDetails?>(null) }
     LaunchedEffect(true) {
         scope.launch {
             details = try {
@@ -74,11 +78,11 @@ fun TowerScreen(navController: NavHostController, tower: Tower) {
             ExtendedFloatingActionButton(
                 onClick = { navController.navigate("game/${tower.name}/play") },
                 icon = { Icon(Icons.Filled.PlayArrow, null) },
-                text = { Text(text = "Play") },
+                text = { Text(text = "启动") },
             )
         },
         contentWindowInsets = WindowInsets.navigationBars
-    ) { padding ->
+    ) { _ ->
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -98,110 +102,15 @@ fun TowerScreen(navController: NavHostController, tower: Tower) {
                     )
 
                     // on background
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceDim,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .padding(32.dp)
-                                .padding(bottom = 16.dp)
-                        ) {
-                            Text(text = tower.title, style = MaterialTheme.typography.headlineLarge)
-                            Row {
-                                Text(text = tower.author)
-                                tower.author2.takeIf { it.isNotBlank() }?.let {
-                                    Text(text = " / $it")
-                                }
-                            }
-                            Row {
-                                SuggestionChip(
-                                    onClick = {},
-                                    label = { Text(text = "${tower.floors} 层") },
-                                    enabled = false,
-                                    modifier = Modifier.padding(end = 8.dp),
-                                )
-                                tower.tags.forEach { tag ->
-                                    SuggestionChip(
-                                        onClick = {},
-                                        label = { Text(text = tag) },
-                                        enabled = false,
-                                        modifier = Modifier.padding(end = 8.dp),
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    Information(tower = tower)
 
-                    Box(modifier = Modifier.offset(y = (-32).dp)) {
-                        Card(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-                                .fillMaxWidth(),
-                            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background)
-                        ) {
-                            Column(Modifier.padding(top = 32.dp, start = 32.dp, end = 32.dp)) {
-                                Text(text = tower.text)
-
-                                Row(
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(bottom = 16.dp)
-                                ) {
-                                    InfoCard(name = "通关人数", value = tower.win.toString())
-                                    InfoCard(name = "精美", value = tower.thumb_up.toString())
-                                    InfoCard(name = "难度", value = tower.difficultrate)
-                                }
-
-                                details?.let { details ->
-                                    Card(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                    ) {
-                                        BoxWithConstraints {
-                                            val availableWidth =
-                                                this@BoxWithConstraints.maxWidth.value.toInt() * 0.75
-                                            val resizedWidths = details.rating.map {
-                                                (it / details.rating.max()
-                                                    .toFloat() * availableWidth).toInt()
-                                            }
-                                            Column(
-                                                modifier = Modifier
-                                                    .padding(16.dp)
-                                                    .fillMaxWidth()
-                                            ) {
-                                                listOf(
-                                                    "极难",
-                                                    "较难",
-                                                    "一般",
-                                                    "较易",
-                                                    "极易"
-                                                ).mapIndexed { index, s ->
-                                                    DifficultyBar(
-                                                        s,
-                                                        details.rating[index].toString(),
-                                                        resizedWidths[index]
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-                                Text(
-                                    "Comments (${tower.comment})",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    modifier = Modifier.padding(top = 32.dp)
-                                )
-                            }
-                        }
-                    }
+                    Stats(tower = tower, details = details)
                 }
 
                 details?.let { details ->
                     items(details.comments) { comment ->
                         CommentCard(comment)
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }
@@ -243,11 +152,8 @@ fun InfoCard(name: String, value: String) {
 
 @Composable
 fun CommentCard(comment: Comment) {
-    Column(
-        Modifier
-            .padding(vertical = 16.dp, horizontal = 32.dp)
-            .offset(y = (-16).dp)
-    ) {
+    val hasReplies = comment.replies.isNotEmpty()
+    Column(Modifier.padding(horizontal = 32.dp)) {
         Row {
             AsyncImage(
                 model = comment.authorAvatar,
@@ -260,18 +166,148 @@ fun CommentCard(comment: Comment) {
             Column(
                 modifier = Modifier.padding(start = 8.dp)
             ) {
-                Text(comment.author)
+                Text(comment.author, style = MaterialTheme.typography.titleMedium)
                 Text(HumanReadable.timeAgo(Instant.fromEpochSeconds(comment.timestamp)))
             }
         }
-        Card(modifier = Modifier.padding(top = 16.dp)) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Card {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(text = comment.comment)
             }
         }
-        Spacer(modifier = Modifier.height(16.dp))
-        comment.replies.map {
-            CommentCard(comment = it)
+        if (hasReplies) {
+            Spacer(modifier = Modifier.height(16.dp))
+            comment.replies.forEach {
+                CommentCard(comment = it)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun Information(tower: Tower) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceDim,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(32.dp)
+                .padding(bottom = 16.dp)
+        ) {
+            Text(text = tower.title, style = MaterialTheme.typography.headlineLarge)
+            Row {
+                Text(text = tower.author)
+                tower.author2.takeIf { it.isNotBlank() }?.let {
+                    Text(text = " / $it")
+                }
+            }
+            Row {
+                SuggestionChip(
+                    onClick = {},
+                    label = { Text(text = "${tower.floors} 层") },
+                    enabled = false,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+                tower.tags.forEach { tag ->
+                    SuggestionChip(
+                        onClick = {},
+                        label = { Text(text = tag) },
+                        enabled = false,
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { /*TODO*/ }) {
+                    Icon(
+                        imageVector = Icons.Filled.FavoriteBorder,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                IconButton(onClick = { /*TODO*/ }) {
+                    Icon(
+                        imageVector = Icons.Filled.CloudDownload,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth(),
+                    progress = { 0.3F }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun Stats(tower: Tower, details: TowerDetails?) {
+    Box(modifier = Modifier.offset(y = (-32).dp)) {
+        Card(
+            modifier = Modifier
+                .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                .fillMaxWidth(),
+            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.background)
+        ) {
+            Column(Modifier.padding(top = 32.dp, start = 32.dp, end = 32.dp)) {
+                Text(text = tower.text)
+
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                ) {
+                    InfoCard(name = "通关人数", value = tower.win.toString())
+                    InfoCard(name = "精美", value = tower.thumb_up.toString())
+                    InfoCard(name = "难度", value = tower.difficultrate)
+                }
+
+                details?.let { details ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                    ) {
+                        BoxWithConstraints {
+                            val availableWidth =
+                                this@BoxWithConstraints.maxWidth.value.toInt() * 0.75
+                            val resizedWidths = details.rating.map {
+                                (it / details.rating.max()
+                                    .toFloat() * availableWidth).toInt()
+                            }
+                            Column(
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .fillMaxWidth()
+                            ) {
+                                listOf(
+                                    "极难",
+                                    "较难",
+                                    "一般",
+                                    "较易",
+                                    "极易"
+                                ).mapIndexed { index, s ->
+                                    DifficultyBar(
+                                        s,
+                                        details.rating[index].toString(),
+                                        resizedWidths[index]
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Text(
+                    "评论 (${tower.comment})",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(top = 32.dp)
+                )
+            }
         }
     }
 }

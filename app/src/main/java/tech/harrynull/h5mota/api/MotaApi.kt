@@ -16,12 +16,17 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
 import tech.harrynull.h5mota.models.Comment
-import tech.harrynull.h5mota.models.DetailedResponse
 import tech.harrynull.h5mota.models.Tower
+import tech.harrynull.h5mota.models.TowerDetails
 import tech.harrynull.h5mota.models.TowerResponse
 
 val StyleRegex = Regex("<style[^>]*>[^<]*</style>")
 fun noStyle(html: String): String = StyleRegex.replace(html, "")
+
+const val Domain = "https://h5mota.com"
+const val ListApi =
+    "$Domain/backend/towers/list.php?sortmode=play&colormode=%23&searchstr=&page=1&tags=[]"
+const val DetailApi = "$Domain/backend/tower/mock_tower.php"
 
 class MotaApi {
     private val json = Json {
@@ -43,18 +48,16 @@ class MotaApi {
 
     suspend fun list(): TowerResponse {
         val response =
-            client.get("https://h5mota.com/backend/towers/list.php?sortmode=play&colormode=%23&searchstr=&page=1&tags=[]")
+            client.get(ListApi)
         val towerResponse = response.body() as TowerResponse
         return towerResponse.copy(towers = towerResponse.towers.map { normalizeTower(it) })
     }
 
-    suspend fun details(name: String): DetailedResponse {
-        val response = client.get("https://h5mota.com/tower/?name=$name")
-        val html = response.bodyAsText()
-        val json =
-            "<script data-ssr=\"tower\".*>(.*)</script>".toRegex().find(html)!!.groupValues[1]
+    suspend fun details(name: String): TowerDetails {
+        val response = client.get("$DetailApi?name=$name")
+        val json = response.bodyAsText()
         val root = this.json.parseToJsonElement(json).jsonObject
-        return DetailedResponse(
+        return TowerDetails(
             rating = root["rating"]!!
                 .jsonObject["difficultyrating"]!!
                 .jsonArray.toList()
@@ -86,6 +89,6 @@ class MotaApi {
 
     companion object {
         fun normalizeUrl(url: String): String =
-            if (url.startsWith("http")) url else "https://h5mota.com/$url"
+            if (url.startsWith("http")) url else "$Domain/$url"
     }
 }
