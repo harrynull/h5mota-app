@@ -62,6 +62,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.kotlinx.datetime)
+    implementation(libs.kdownloader)
     implementation(libs.human.readable)
     implementation(libs.navigation.compose)
     implementation(libs.ktor.client.core)

@@ -92,3 +92,11 @@ class MotaApi {
             if (url.startsWith("http")) url else "$Domain/$url"
     }
 }
+
+fun Tower.downloadUrl(): String {
+    return "$Domain/games/$name/$name.zip"
+}
+
+fun Tower.pageUrl(): String {
+    return "$Domain/tower?name=$name"
+}

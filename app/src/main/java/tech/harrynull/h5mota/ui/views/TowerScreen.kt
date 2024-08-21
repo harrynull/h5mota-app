@@ -1,5 +1,7 @@
 package tech.harrynull.h5mota.ui.views
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -19,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
@@ -43,9 +46,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat.startActivity
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -54,9 +59,12 @@ import kotlinx.datetime.Instant
 import nl.jacobras.humanreadable.HumanReadable
 import tech.harrynull.h5mota.R
 import tech.harrynull.h5mota.api.MotaApi
+import tech.harrynull.h5mota.api.pageUrl
 import tech.harrynull.h5mota.models.Comment
 import tech.harrynull.h5mota.models.Tower
 import tech.harrynull.h5mota.models.TowerDetails
+import tech.harrynull.h5mota.utils.DownloadManager
+
 
 @Composable
 fun TowerScreen(navController: NavHostController, tower: Tower) {
@@ -197,13 +205,16 @@ fun Information(tower: Tower) {
                 .padding(32.dp)
                 .padding(bottom = 16.dp)
         ) {
+            // title
             Text(text = tower.title, style = MaterialTheme.typography.headlineLarge)
+            // author
             Row {
                 Text(text = tower.author)
                 tower.author2.takeIf { it.isNotBlank() }?.let {
                     Text(text = " / $it")
                 }
             }
+            // tags
             Row {
                 SuggestionChip(
                     onClick = {},
@@ -220,7 +231,25 @@ fun Information(tower: Tower) {
                     )
                 }
             }
+            // actions
+            val ctx = LocalContext.current
+            val downloadManager = DownloadManager(ctx)
+            val downloaded = remember {
+                mutableStateOf(downloadManager.downloaded(tower))
+            }
+            val downloadProgress = remember { mutableStateOf<Int?>(null) }
             Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = {
+                    val browserIntent =
+                        Intent(Intent.ACTION_VIEW, Uri.parse(tower.pageUrl()))
+                    startActivity(ctx, browserIntent, null)
+                }) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
                 IconButton(onClick = { /*TODO*/ }) {
                     Icon(
                         imageVector = Icons.Filled.FavoriteBorder,
@@ -228,17 +257,33 @@ fun Information(tower: Tower) {
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
-                IconButton(onClick = { /*TODO*/ }) {
+                IconButton(onClick = {
+                    if (downloaded.value) {
+                        return@IconButton
+                    }
+                    downloadManager.download(tower,
+                        onProgress = { progress -> downloadProgress.value = progress },
+                        onCompleted = {
+                            downloaded.value = downloadManager.downloaded(tower)
+                            downloadProgress.value = null
+                        }
+                    )
+                }) {
                     Icon(
                         imageVector = Icons.Filled.CloudDownload,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = if (downloaded.value)
+                            Color(0xFF43A047)
+                        else
+                            MaterialTheme.colorScheme.primary
                     )
                 }
-                LinearProgressIndicator(
-                    modifier = Modifier.fillMaxWidth(),
-                    progress = { 0.3F }
-                )
+                downloadProgress.value?.let { progress ->
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth(),
+                        progress = { progress / 100f },
+                    )
+                }
             }
         }
     }

@@ -28,7 +28,6 @@ data class Tower(
     val comment: String, // number of comments
     val hot: Int, // hot rating
     val thumb_up: Int, // thumb up rating
-
 )
 
 @Serializable
