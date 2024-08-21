@@ -17,6 +17,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,6 +58,7 @@ sealed class NavigationItem(val route: String, val title: String, val icon: Imag
 fun AppNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController,
+    snackbarHostState: SnackbarHostState,
     startDestination: String = NavigationItem.Home.route
 ) {
     val scope = rememberCoroutineScope()
@@ -66,7 +69,7 @@ fun AppNavHost(
         startDestination = startDestination
     ) {
         composable(NavigationItem.Home.route) {
-            HomeScreen(navController = navController)
+            HomeScreen(navController = navController, snackbarHostState = snackbarHostState)
         }
         composable("game/{id}") { backStackEntry ->
             val gameId = backStackEntry.arguments?.getString("id")!!
@@ -74,7 +77,13 @@ fun AppNavHost(
             LaunchedEffect(true) {
                 scope.launch { tower = TowerRepo(ctx).loadTower(gameId) }
             }
-            tower?.let { TowerScreen(navController = navController, tower = it) }
+            tower?.let {
+                TowerScreen(
+                    navController = navController,
+                    snackbarHostState = snackbarHostState,
+                    tower = it
+                )
+            }
         }
         composable("game/{id}/play") { backStackEntry ->
             val gameId = backStackEntry.arguments?.getString("id")!!
@@ -135,9 +144,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val navController = rememberNavController()
+            val snackbarHostState = remember { SnackbarHostState() }
+
             H5motaTheme {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
+                    snackbarHost = { SnackbarHost(snackbarHostState) },
                     bottomBar = {
                         AppNavigationBar(navController = navController)
                     },
@@ -145,6 +157,7 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     AppNavHost(
                         navController = navController,
+                        snackbarHostState = snackbarHostState,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }

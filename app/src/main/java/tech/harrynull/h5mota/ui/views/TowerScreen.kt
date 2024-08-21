@@ -34,6 +34,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -69,7 +70,11 @@ import tech.harrynull.h5mota.utils.DownloadManager
 
 
 @Composable
-fun TowerScreen(navController: NavHostController, tower: Tower) {
+fun TowerScreen(
+    navController: NavHostController,
+    snackbarHostState: SnackbarHostState,
+    tower: Tower
+) {
     val scope = rememberCoroutineScope()
     var details by remember { mutableStateOf<TowerDetails?>(null) }
     val ctx = LocalContext.current
@@ -79,7 +84,11 @@ fun TowerScreen(navController: NavHostController, tower: Tower) {
                 MotaApi().details(ctx, tower.name)
             } catch (e: Exception) {
                 e.printStackTrace()
-                null
+                // try fallback to local storage
+                TowerRepo(ctx).loadTowerDetails(tower.name)
+            }
+            if (details == null) {
+                snackbarHostState.showSnackbar("详细信息加载失败")
             }
         }
     }

@@ -16,6 +16,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -39,7 +40,10 @@ import tech.harrynull.h5mota.models.Tower
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavHostController) {
+fun HomeScreen(
+    navController: NavHostController,
+    snackbarHostState: SnackbarHostState,
+) {
     val scope = rememberCoroutineScope()
     var towers by remember { mutableStateOf(listOf<Tower>()) }
     var isRefreshing by remember { mutableStateOf(false) }
@@ -49,14 +53,24 @@ fun HomeScreen(navController: NavHostController) {
     val ctx = LocalContext.current
 
     suspend fun load() {
-        // first load
-        Log.i("HomeScreen", "Loading page ${pagesLoaded + 1}")
-        if (pagesLoaded == 0) {
-            towers = MotaApi().list(ctx = ctx, page = 1, sortMode = sortMode).towers.toMutableList()
-        } else {
-            towers += MotaApi().list(ctx = ctx, page = pagesLoaded + 1, sortMode = sortMode).towers
+        try {
+            // first load
+            Log.i("HomeScreen", "Loading page ${pagesLoaded + 1}")
+            if (pagesLoaded == 0) {
+                towers =
+                    MotaApi().list(ctx = ctx, page = 1, sortMode = sortMode).towers.toMutableList()
+            } else {
+                towers += MotaApi().list(
+                    ctx = ctx,
+                    page = pagesLoaded + 1,
+                    sortMode = sortMode
+                ).towers
+            }
+            pagesLoaded++
+        } catch (e: Exception) {
+            Log.e("HomeScreen", "Failed to load towers", e)
+            snackbarHostState.showSnackbar("加载失败: ${e.localizedMessage}")
         }
-        pagesLoaded++
     }
     // observe list scrolling
     val reachedBottom: Boolean by remember {

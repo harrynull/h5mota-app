@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import coil.request.CachePolicy
 import coil.request.ImageRequest
 import tech.harrynull.h5mota.R
 import tech.harrynull.h5mota.models.Tower
@@ -47,6 +48,9 @@ fun GameBox(navController: NavHostController, tower: Tower) {
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(tower.image)
                         .crossfade(true)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .memoryCachePolicy(CachePolicy.ENABLED)
+                        .networkCachePolicy(CachePolicy.ENABLED)
                         .placeholder(R.drawable.placeholder)
                         .build(),
                     modifier = Modifier

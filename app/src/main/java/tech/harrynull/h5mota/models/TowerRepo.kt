@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
 
@@ -44,10 +45,10 @@ class TowerRepo(private val ctx: Context) {
         }
     }
 
-    suspend fun loadTowerDetails(id: String): TowerDetails {
+    suspend fun loadTowerDetails(id: String): TowerDetails? {
         return ctx.towerDataStore.data.map { pref ->
-            pref[towerDetailsKey(id)]!!.parseToTowerDetails()
-        }.first()
+            pref[towerDetailsKey(id)]?.parseToTowerDetails()
+        }.firstOrNull()
     }
 
     suspend fun persistTowerDetails(id: String, details: TowerDetails) {
