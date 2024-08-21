@@ -71,6 +71,7 @@ dependencies {
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.datastore.preferences)
     implementation(libs.coil)
     implementation(libs.coil.compose)
     testImplementation(libs.junit)

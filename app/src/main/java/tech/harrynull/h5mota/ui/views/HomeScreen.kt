@@ -137,14 +137,15 @@ fun HomeScreen(navController: NavHostController) {
     var pagesLoaded by remember { mutableStateOf(0) }
     var sortMode by remember { mutableStateOf(MotaApi.SortMode.Hot) }
     val listState = rememberLazyListState()
+    val ctx = LocalContext.current
 
     suspend fun load() {
         // first load
-        Log.i("HomeScreen", "loading page ${pagesLoaded + 1}")
+        Log.i("HomeScreen", "Loading page ${pagesLoaded + 1}")
         if (pagesLoaded == 0) {
-            towers = MotaApi().list(page = 1, sortMode = sortMode).towers.toMutableList()
+            towers = MotaApi().list(ctx = ctx, page = 1, sortMode = sortMode).towers.toMutableList()
         } else {
-            towers += MotaApi().list(page = pagesLoaded + 1, sortMode = sortMode).towers
+            towers += MotaApi().list(ctx = ctx, page = pagesLoaded + 1, sortMode = sortMode).towers
         }
         pagesLoaded++
     }

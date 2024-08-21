@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
@@ -63,6 +64,7 @@ import tech.harrynull.h5mota.api.pageUrl
 import tech.harrynull.h5mota.models.Comment
 import tech.harrynull.h5mota.models.Tower
 import tech.harrynull.h5mota.models.TowerDetails
+import tech.harrynull.h5mota.models.TowerRepo
 import tech.harrynull.h5mota.utils.DownloadManager
 
 
@@ -70,10 +72,11 @@ import tech.harrynull.h5mota.utils.DownloadManager
 fun TowerScreen(navController: NavHostController, tower: Tower) {
     val scope = rememberCoroutineScope()
     var details by remember { mutableStateOf<TowerDetails?>(null) }
+    val ctx = LocalContext.current
     LaunchedEffect(true) {
         scope.launch {
             details = try {
-                MotaApi().details(tower.name)
+                MotaApi().details(ctx, tower.name)
             } catch (e: Exception) {
                 e.printStackTrace()
                 null
@@ -247,6 +250,10 @@ fun Information(tower: Tower) {
                 mutableStateOf(downloadManager.downloaded(tower))
             }
             val downloadProgress = remember { mutableStateOf<Int?>(null) }
+            val scope = rememberCoroutineScope()
+            val towerRepo = TowerRepo(ctx)
+            var favorite by remember { mutableStateOf(false) }
+            LaunchedEffect(true) { scope.launch { favorite = towerRepo.isStarred(tower) } }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // open externally
                 IconButton(onClick = {
@@ -261,9 +268,15 @@ fun Information(tower: Tower) {
                     )
                 }
                 // favorite
-                IconButton(onClick = { /*TODO*/ }) {
+                IconButton(onClick = {
+                    scope.launch {
+                        favorite = !favorite
+                        towerRepo.setStarred(tower, favorite)
+                    }
+                }) {
                     Icon(
-                        imageVector = Icons.Filled.FavoriteBorder,
+                        imageVector = if (favorite) Icons.Filled.Favorite else
+                            Icons.Filled.FavoriteBorder,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary
                     )

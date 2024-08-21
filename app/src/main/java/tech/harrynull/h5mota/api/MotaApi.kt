@@ -1,5 +1,6 @@
 package tech.harrynull.h5mota.api
 
+import android.content.Context
 import android.text.Html
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -57,20 +58,20 @@ class MotaApi {
                 .toString(),
         )
 
-    suspend fun list(sortMode: SortMode, page: Int): TowerResponse {
+    suspend fun list(ctx: Context, sortMode: SortMode, page: Int): TowerResponse {
         val response =
             client.get("$ListApi&sortmode=${sortMode.key}&page=$page")
         val towerResponse = response.body() as TowerResponse
         val ret = towerResponse.copy(towers = towerResponse.towers.map { normalizeTower(it) })
-        TowerRepo.addTowers(ret.towers)
+        TowerRepo(ctx).persistTowers(ret.towers)
         return ret
     }
 
-    suspend fun details(name: String): TowerDetails {
+    suspend fun details(ctx: Context, name: String): TowerDetails {
         val response = client.get("$DetailApi?name=$name")
         val json = response.bodyAsText()
         val root = this.json.parseToJsonElement(json).jsonObject
-        return TowerDetails(
+        val ret = TowerDetails(
             rating = root["rating"]!!
                 .jsonObject["difficultyrating"]!!
                 .jsonArray.toList()
@@ -98,6 +99,8 @@ class MotaApi {
                     return@map parse(it)
                 }
         )
+        TowerRepo(ctx).persistTowerDetails(name, ret)
+        return ret
     }
 
     companion object {
