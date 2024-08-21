@@ -142,12 +142,13 @@ fun DifficultyBar(description: String, value: String, width: Int) {
 }
 
 @Composable
-fun InfoCard(name: String, value: String) {
+fun StatsInfoCard(name: String, value: String) {
     Card(
-        modifier = Modifier
-            .padding(top = 16.dp),
+        modifier = Modifier.padding(top = 16.dp),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier
+            .padding(16.dp)
+            .padding(horizontal = 10.dp)) {
             Text(text = name)
             Text(
                 text = value,
@@ -307,9 +308,9 @@ fun Stats(tower: Tower, details: TowerDetails?) {
                         .fillMaxWidth()
                         .padding(bottom = 16.dp)
                 ) {
-                    InfoCard(name = "通关人数", value = tower.win.toString())
-                    InfoCard(name = "精美", value = tower.thumb_up.toString())
-                    InfoCard(name = "难度", value = tower.difficultrate)
+                    StatsInfoCard(name = "通关人数", value = tower.win.toString())
+                    StatsInfoCard(name = "精美", value = tower.thumb_up.toString())
+                    StatsInfoCard(name = "难度", value = tower.difficultrate)
                 }
 
                 details?.let { details ->
