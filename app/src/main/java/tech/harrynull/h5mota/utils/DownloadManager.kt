@@ -59,4 +59,8 @@ class DownloadManager(private val context: Context) {
     fun downloaded(tower: Tower): Boolean {
         return getDownloadedPath(tower).exists()
     }
+
+    fun getAllDownloaded(): List<String> {
+        return downloadRoot().list()?.toList() ?: emptyList()
+    }
 }

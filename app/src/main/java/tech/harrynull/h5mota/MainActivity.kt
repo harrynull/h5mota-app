@@ -38,8 +38,11 @@ import kotlinx.coroutines.launch
 import tech.harrynull.h5mota.models.Tower
 import tech.harrynull.h5mota.models.TowerRepo
 import tech.harrynull.h5mota.ui.theme.H5motaTheme
+import tech.harrynull.h5mota.ui.views.FavoriteScreen
 import tech.harrynull.h5mota.ui.views.HomeScreen
+import tech.harrynull.h5mota.ui.views.OfflineScreen
 import tech.harrynull.h5mota.ui.views.PlayScreen
+import tech.harrynull.h5mota.ui.views.RecentScreen
 import tech.harrynull.h5mota.ui.views.TowerScreen
 
 sealed class NavigationItem(val route: String, val title: String, val icon: ImageVector?) {
@@ -80,6 +83,15 @@ fun AppNavHost(
                 scope.launch { tower = TowerRepo(ctx).loadTower(gameId) }
             }
             tower?.let { PlayScreen(tower = it) }
+        }
+        composable("recent") {
+            RecentScreen(navController = navController)
+        }
+        composable("favorite") {
+            FavoriteScreen(navController = navController)
+        }
+        composable("offline") {
+            OfflineScreen(navController = navController)
         }
     }
 }
