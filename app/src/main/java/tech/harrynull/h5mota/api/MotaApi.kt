@@ -18,6 +18,7 @@ import kotlinx.serialization.json.long
 import tech.harrynull.h5mota.models.Comment
 import tech.harrynull.h5mota.models.Tower
 import tech.harrynull.h5mota.models.TowerDetails
+import tech.harrynull.h5mota.models.TowerRepo
 import tech.harrynull.h5mota.models.TowerResponse
 
 val StyleRegex = Regex("<style[^>]*>[^<]*</style>")
@@ -25,13 +26,23 @@ fun noStyle(html: String): String = StyleRegex.replace(html, "")
 
 const val Domain = "https://h5mota.com"
 const val ListApi =
-    "$Domain/backend/towers/list.php?sortmode=play&colormode=%23&searchstr=&page=1&tags=[]"
+    "$Domain/backend/towers/list.php?colormode=%23&searchstr=&tags=[]"
 const val DetailApi = "$Domain/backend/tower/mock_tower.php"
 
 class MotaApi {
+    enum class SortMode(val key: String, val displayName: String) {
+        Hot("hot", "热度"),
+        New("new", "最新"),
+        Play("play", "最多人玩"),
+        Comment("comment", "最多评论"),
+        LastComment("lastcomment", "最新评论"),
+        Pass("pass", "最多通关"),
+    }
+
     private val json = Json {
         ignoreUnknownKeys = true
     }
+
     private val client = HttpClient {
         install(ContentNegotiation) {
             json(contentType = ContentType.Any, json = json)
@@ -46,11 +57,13 @@ class MotaApi {
                 .toString(),
         )
 
-    suspend fun list(): TowerResponse {
+    suspend fun list(sortMode: SortMode, page: Int): TowerResponse {
         val response =
-            client.get(ListApi)
+            client.get("$ListApi&sortmode=${sortMode.key}&page=$page")
         val towerResponse = response.body() as TowerResponse
-        return towerResponse.copy(towers = towerResponse.towers.map { normalizeTower(it) })
+        val ret = towerResponse.copy(towers = towerResponse.towers.map { normalizeTower(it) })
+        TowerRepo.addTowers(ret.towers)
+        return ret
     }
 
     suspend fun details(name: String): TowerDetails {
@@ -92,6 +105,7 @@ class MotaApi {
             if (url.startsWith("http")) url else "$Domain/$url"
     }
 }
+
 
 fun Tower.downloadUrl(): String {
     return "$Domain/games/$name/$name.zip"

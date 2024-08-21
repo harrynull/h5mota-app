@@ -1,5 +1,6 @@
 package tech.harrynull.h5mota.ui.views
 
+import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,16 +11,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,7 +43,6 @@ import kotlinx.coroutines.launch
 import tech.harrynull.h5mota.R
 import tech.harrynull.h5mota.api.MotaApi
 import tech.harrynull.h5mota.models.Tower
-import tech.harrynull.h5mota.models.TowerRepo
 
 @Composable
 fun GameBox(navController: NavHostController, tower: Tower) {
@@ -118,31 +122,67 @@ fun GameBox(navController: NavHostController, tower: Tower) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavHostController) {
     val scope = rememberCoroutineScope()
     var towers by remember { mutableStateOf(listOf<Tower>()) }
-    LaunchedEffect(true) {
-        scope.launch {
-            towers = try {
-                MotaApi().list().towers
-            } catch (e: Exception) {
-                e.printStackTrace()
-                emptyList()
-            }
-            TowerRepo.addTowers(towers)
+    var isRefreshing by remember { mutableStateOf(false) }
+    var pagesLoaded by remember { mutableStateOf(0) }
+    var sortMode by remember { mutableStateOf(MotaApi.SortMode.Hot) }
+    val listState = rememberLazyListState()
+
+    suspend fun load() {
+        // first load
+        Log.i("HomeScreen", "loading page ${pagesLoaded + 1}")
+        if (pagesLoaded == 0) {
+            towers = MotaApi().list(page = 1, sortMode = sortMode).towers.toMutableList()
+        } else {
+            towers += MotaApi().list(page = pagesLoaded + 1, sortMode = sortMode).towers
+        }
+        pagesLoaded++
+    }
+    // observe list scrolling
+    val reachedBottom: Boolean by remember {
+        derivedStateOf {
+            val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()
+            lastVisibleItem?.index != 0 && lastVisibleItem?.index == listState.layoutInfo.totalItemsCount - 1
         }
     }
-    LazyColumn {
-        item {
-            Text(
-                "探索",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(top = 32.dp, start = 16.dp)
-            )
+
+    // load more if scrolled to bottom
+    LaunchedEffect(reachedBottom) {
+        if (reachedBottom) load()
+    }
+
+    LaunchedEffect(true) {
+        scope.launch {
+            pagesLoaded = 0
+            load()
         }
-        items(towers) { tower ->
-            GameBox(navController, tower)
+    }
+
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            scope.launch {
+                isRefreshing = true
+                load()
+                isRefreshing = false
+            }
+        },
+    ) {
+        LazyColumn(state = listState) {
+            item {
+                Text(
+                    "探索",
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.padding(top = 32.dp, start = 16.dp)
+                )
+            }
+            items(towers, key = { tower -> tower.name }) { tower ->
+                GameBox(navController, tower)
+            }
         }
     }
 }
