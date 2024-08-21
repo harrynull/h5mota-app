@@ -117,7 +117,9 @@ fun TowerScreen(navController: NavHostController, tower: Tower) {
 
                 details?.let { details ->
                     items(details.comments) { comment ->
-                        CommentCard(comment)
+                        Box(modifier = Modifier.padding(end = 32.dp)) {
+                            CommentCard(comment)
+                        }
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
@@ -128,8 +130,11 @@ fun TowerScreen(navController: NavHostController, tower: Tower) {
 
 @Composable
 fun DifficultyBar(description: String, value: String, width: Int) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(description)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 4.dp)
+    ) {
+        Text(description, style = MaterialTheme.typography.labelMedium)
         Surface(
             modifier = Modifier
                 .width(width.dp)
@@ -137,7 +142,7 @@ fun DifficultyBar(description: String, value: String, width: Int) {
                 .padding(start = 8.dp, end = 8.dp),
             color = MaterialTheme.colorScheme.primary
         ) { }
-        Text(value)
+        Text(value, style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -146,13 +151,15 @@ fun StatsInfoCard(name: String, value: String) {
     Card(
         modifier = Modifier.padding(top = 16.dp),
     ) {
-        Column(modifier = Modifier
-            .padding(16.dp)
-            .padding(horizontal = 10.dp)) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .padding(horizontal = 5.dp)
+        ) {
             Text(text = name)
             Text(
                 text = value,
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(top = 8.dp)
             )
         }
@@ -162,27 +169,28 @@ fun StatsInfoCard(name: String, value: String) {
 @Composable
 fun CommentCard(comment: Comment) {
     val hasReplies = comment.replies.isNotEmpty()
-    Column(Modifier.padding(horizontal = 32.dp)) {
-        Row {
+    Column(Modifier.padding(start = 32.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
                 model = comment.authorAvatar,
                 contentDescription = null,
                 modifier = Modifier
-                    .size(50.dp)
-                    .clip(RoundedCornerShape(25.dp)),
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(16.dp)),
                 contentScale = ContentScale.Crop
             )
-            Column(
-                modifier = Modifier.padding(start = 8.dp)
-            ) {
-                Text(comment.author, style = MaterialTheme.typography.titleMedium)
-                Text(HumanReadable.timeAgo(Instant.fromEpochSeconds(comment.timestamp)))
+            Column(modifier = Modifier.padding(start = 8.dp)) {
+                Text(comment.author, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    HumanReadable.timeAgo(Instant.fromEpochSeconds(comment.timestamp)),
+                    style = MaterialTheme.typography.labelMedium
+                )
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
         Card {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(text = comment.comment)
+                Text(text = comment.comment, style = MaterialTheme.typography.bodyMedium)
             }
         }
         if (hasReplies) {
@@ -240,6 +248,7 @@ fun Information(tower: Tower) {
             }
             val downloadProgress = remember { mutableStateOf<Int?>(null) }
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // open externally
                 IconButton(onClick = {
                     val browserIntent =
                         Intent(Intent.ACTION_VIEW, Uri.parse(tower.pageUrl()))
@@ -251,6 +260,7 @@ fun Information(tower: Tower) {
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
+                // favorite
                 IconButton(onClick = { /*TODO*/ }) {
                     Icon(
                         imageVector = Icons.Filled.FavoriteBorder,
@@ -258,8 +268,10 @@ fun Information(tower: Tower) {
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
+                // download
                 IconButton(onClick = {
-                    if (downloaded.value) {
+                    // don't download if already downloaded or downloading
+                    if (downloaded.value || downloadProgress.value != null) {
                         return@IconButton
                     }
                     downloadManager.download(tower,
@@ -320,7 +332,7 @@ fun Stats(tower: Tower, details: TowerDetails?) {
                     ) {
                         BoxWithConstraints {
                             val availableWidth =
-                                this@BoxWithConstraints.maxWidth.value.toInt() * 0.75
+                                this@BoxWithConstraints.maxWidth.value.toInt() * 0.6
                             val resizedWidths = details.rating.map {
                                 (it / details.rating.max()
                                     .toFloat() * availableWidth).toInt()
