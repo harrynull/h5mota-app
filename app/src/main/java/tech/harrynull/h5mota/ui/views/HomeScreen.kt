@@ -4,7 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,6 +21,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults.Indicator
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -120,41 +122,47 @@ fun HomeScreen(
 
     // load more if scrolled to bottom
     LaunchedEffect(reachedBottom) {
-        if (reachedBottom) viewModel.load()
+        if (uiState.towers.isNotEmpty() && reachedBottom) viewModel.load()
     }
 
     LaunchedEffect(true) {
         if (uiState.towers.isEmpty() && !uiState.isRefreshing) viewModel.load()
     }
 
+    val state = rememberPullToRefreshState()
     PullToRefreshBox(
         isRefreshing = uiState.isRefreshing,
         onRefresh = {
             viewModel.clearLoaded()
             viewModel.load()
         },
+        modifier = Modifier.fillMaxWidth(),
+        state = state,
+        indicator = {
+            Indicator(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 100.dp),
+                isRefreshing = uiState.isRefreshing,
+                state = state,
+            )
+        }
     ) {
         LazyColumn(state = listState) {
             item {
                 Row(
-                    modifier = Modifier.padding(top = 32.dp, start = 16.dp)
+                    modifier = Modifier.padding(top = 50.dp, start = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        "探索",
-                        style = MaterialTheme.typography.headlineMedium
-                    )
+                    Text("探索", style = MaterialTheme.typography.headlineMedium)
                     // Sort mode
-
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
                             .wrapContentSize(Alignment.TopStart)
+                            .padding(start = 8.dp)
                     ) {
                         var expanded by remember { mutableStateOf(false) }
-                        TextButton(
-                            onClick = { expanded = !expanded },
-                            modifier = Modifier.padding(start = 8.dp)
-                        ) {
+                        TextButton(onClick = { expanded = !expanded }) {
                             Text(
                                 uiState.sortMode.displayName,
                                 style = MaterialTheme.typography.titleLarge

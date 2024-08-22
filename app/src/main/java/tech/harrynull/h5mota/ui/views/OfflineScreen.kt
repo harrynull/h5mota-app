@@ -60,7 +60,7 @@ fun OfflineScreen(
 
     LazyColumn {
         item {
-            Row(modifier = Modifier.padding(top = 32.dp, start = 16.dp)) {
+            Row(modifier = Modifier.padding(top = 50.dp, start = 20.dp)) {
                 Text("离线游戏", style = MaterialTheme.typography.headlineMedium)
             }
         }

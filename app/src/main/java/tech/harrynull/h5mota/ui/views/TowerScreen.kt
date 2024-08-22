@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -182,7 +184,7 @@ fun DifficultyBar(description: String, value: String, width: Int) {
         Text(description, style = MaterialTheme.typography.labelMedium)
         Surface(
             modifier = Modifier
-                .width(width.dp)
+                .width(width.dp + 16.dp)
                 .height(16.dp)
                 .padding(start = 8.dp, end = 8.dp),
             color = MaterialTheme.colorScheme.primary
@@ -248,6 +250,7 @@ fun CommentCard(comment: Comment) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun Information(tower: Tower) {
     Surface(
@@ -260,7 +263,7 @@ fun Information(tower: Tower) {
                 .padding(bottom = 16.dp)
         ) {
             // title
-            Text(text = tower.title, style = MaterialTheme.typography.headlineLarge)
+            Text(text = tower.title, style = MaterialTheme.typography.headlineMedium)
             // author
             Row {
                 Text(text = tower.author)
@@ -269,19 +272,17 @@ fun Information(tower: Tower) {
                 }
             }
             // tags
-            Row {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SuggestionChip(
                     onClick = {},
                     label = { Text(text = "${tower.floors} 层") },
                     enabled = false,
-                    modifier = Modifier.padding(end = 8.dp),
                 )
                 tower.tags.forEach { tag ->
                     SuggestionChip(
                         onClick = {},
                         label = { Text(text = tag) },
                         enabled = false,
-                        modifier = Modifier.padding(end = 8.dp),
                     )
                 }
             }
@@ -390,7 +391,7 @@ fun Stats(tower: Tower, details: TowerDetails?) {
                                 this@BoxWithConstraints.maxWidth.value.toInt() * 0.6
                             val resizedWidths = details.rating.map {
                                 (it / details.rating.max()
-                                    .toFloat() * availableWidth).toInt()
+                                    .toFloat() * availableWidth).toInt().coerceAtLeast(8)
                             }
                             Column(
                                 modifier = Modifier

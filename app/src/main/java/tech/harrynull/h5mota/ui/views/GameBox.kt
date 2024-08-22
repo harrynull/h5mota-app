@@ -43,7 +43,7 @@ fun GameBox(navigateToGame: (Tower) -> Unit, tower: Tower) {
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         onClick = {
             navigateToGame(tower)
         }

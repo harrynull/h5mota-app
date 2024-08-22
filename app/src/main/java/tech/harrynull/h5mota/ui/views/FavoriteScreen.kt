@@ -52,7 +52,7 @@ fun FavoriteScreen(
 
     LazyColumn {
         item {
-            Row(modifier = Modifier.padding(top = 32.dp, start = 16.dp)) {
+            Row(modifier = Modifier.padding(top = 50.dp, start = 20.dp)) {
                 Text("收藏", style = MaterialTheme.typography.headlineMedium)
             }
         }
