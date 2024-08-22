@@ -2,6 +2,7 @@ package tech.harrynull.h5mota.api
 
 import android.content.Context
 import android.text.Html
+import android.util.Log
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -59,6 +60,8 @@ class MotaApi {
         )
 
     suspend fun list(ctx: Context, sortMode: SortMode, page: Int): TowerResponse {
+        Log.d("MotaApi", "fetching list: $sortMode")
+
         val response =
             client.get("$ListApi&sortmode=${sortMode.key}&page=$page")
         val towerResponse = response.body() as TowerResponse
@@ -68,6 +71,7 @@ class MotaApi {
     }
 
     suspend fun details(ctx: Context, name: String): TowerDetails {
+        Log.d("MotaApi", "fetching details: $name")
         val response = client.get("$DetailApi?name=$name")
         val json = response.bodyAsText()
         val root = this.json.parseToJsonElement(json).jsonObject

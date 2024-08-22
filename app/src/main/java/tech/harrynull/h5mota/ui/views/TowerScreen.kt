@@ -1,5 +1,6 @@
 package tech.harrynull.h5mota.ui.views
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
@@ -34,7 +35,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -53,9 +53,16 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat.startActivity
-import androidx.navigation.NavHostController
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
 import nl.jacobras.humanreadable.HumanReadable
@@ -68,71 +75,97 @@ import tech.harrynull.h5mota.models.TowerDetails
 import tech.harrynull.h5mota.models.TowerRepo
 import tech.harrynull.h5mota.utils.DownloadManager
 
+data class TowerScreenUiState(
+    val tower: Tower? = null,
+    val details: TowerDetails? = null,
+)
 
-@Composable
-fun TowerScreen(
-    navController: NavHostController,
-    snackbarHostState: SnackbarHostState,
-    tower: Tower
-) {
-    val scope = rememberCoroutineScope()
-    var details by remember { mutableStateOf<TowerDetails?>(null) }
-    val ctx = LocalContext.current
-    LaunchedEffect(true) {
-        scope.launch {
-            details = try {
-                MotaApi().details(ctx, tower.name)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                // try fallback to local storage
-                TowerRepo(ctx).loadTowerDetails(tower.name)
-            }
-            if (details == null) {
-                snackbarHostState.showSnackbar("详细信息加载失败")
+class TowerScreenViewModel : ViewModel() {
+    private val _uiState = MutableStateFlow(TowerScreenUiState())
+    val uiState: StateFlow<TowerScreenUiState> = _uiState.asStateFlow()
+
+    fun load(context: Context, towerId: String) {
+        if (uiState.value.tower != null) return
+        viewModelScope.launch {
+            val tower = TowerRepo(context).loadTower(towerId)
+            _uiState.update { currentState ->
+                currentState.copy(tower = tower)
             }
         }
     }
 
-    Scaffold(
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { navController.navigate("game/${tower.name}/play") },
-                icon = { Icon(Icons.Filled.PlayArrow, null) },
-                text = { Text(text = "启动") },
-            )
-        },
-        contentWindowInsets = WindowInsets.navigationBars
-    ) { _ ->
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-        ) {
-            LazyColumn {
-                item {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(tower.image)
-                            .crossfade(true)
-                            .placeholder(R.drawable.placeholder)
-                            .build(),
-                        modifier = Modifier.fillMaxWidth(),
-                        contentScale = ContentScale.FillWidth,
-                        contentDescription = null,
-                    )
+    fun loadDetails(context: Context, towerId: String) {
+        if (uiState.value.details != null) return
+        viewModelScope.launch {
+            val details = try {
+                MotaApi().details(context, towerId)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // try fallback to local storage
+                TowerRepo(context).loadTowerDetails(towerId)
+            }
+            _uiState.update { currentState ->
+                currentState.copy(details = details)
+            }
+        }
+    }
+}
 
-                    // on background
-                    Information(tower = tower)
+@Composable
+fun TowerScreen(
+    navigateToPlay: (Tower) -> Unit,
+    towerId: String,
+    viewModel: TowerScreenViewModel = viewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val ctx = LocalContext.current
+    LaunchedEffect(true) {
+        viewModel.load(ctx, towerId)
+        viewModel.loadDetails(ctx, towerId)
+    }
 
-                    Stats(tower = tower, details = details)
-                }
+    uiState.tower?.let { tower ->
+        Scaffold(
+            floatingActionButton = {
+                ExtendedFloatingActionButton(
+                    onClick = { navigateToPlay(tower) },
+                    icon = { Icon(Icons.Filled.PlayArrow, null) },
+                    text = { Text(text = "启动") },
+                )
+            },
+            contentWindowInsets = WindowInsets.navigationBars
+        ) { _ ->
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+            ) {
+                LazyColumn {
+                    item {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(tower.image)
+                                .crossfade(true)
+                                .placeholder(R.drawable.placeholder)
+                                .build(),
+                            modifier = Modifier.fillMaxWidth(),
+                            contentScale = ContentScale.FillWidth,
+                            contentDescription = null,
+                        )
 
-                details?.let { details ->
-                    items(details.comments) { comment ->
-                        Box(modifier = Modifier.padding(end = 32.dp)) {
-                            CommentCard(comment)
+                        // on background
+                        Information(tower = tower)
+
+                        Stats(tower = tower, details = uiState.details)
+                    }
+
+                    uiState.details?.let { details ->
+                        items(details.comments) { comment ->
+                            Box(modifier = Modifier.padding(end = 32.dp)) {
+                                CommentCard(comment)
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }

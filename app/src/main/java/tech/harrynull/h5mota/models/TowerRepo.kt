@@ -95,6 +95,6 @@ class TowerRepo(private val ctx: Context) {
         return ctx.towerDataStore.data.map { pref ->
             (pref[RecentKey]?.split("|")?.toList() ?: emptyList())
                 .map { pref[towerKey(it)]!!.parseToTower() }
-        }.first()
+        }.first().reversed()
     }
 }

@@ -63,27 +63,25 @@ fun AppNavHost(
 ) {
     val scope = rememberCoroutineScope()
     val ctx = LocalContext.current
+    val navigateToGame = { tower: Tower ->
+        navController.navigate("game/${tower.name}")
+    }
+    val navigateToPlay = { tower: Tower ->
+        navController.navigate("game/${tower.name}/play")
+    }
     NavHost(
         modifier = modifier,
         navController = navController,
         startDestination = startDestination
     ) {
         composable(NavigationItem.Home.route) {
-            HomeScreen(navController = navController, snackbarHostState = snackbarHostState)
+            HomeScreen(navigateToGame = navigateToGame, snackbarHostState = snackbarHostState)
         }
         composable("game/{id}") { backStackEntry ->
-            val gameId = backStackEntry.arguments?.getString("id")!!
-            var tower by remember { mutableStateOf<Tower?>(null) }
-            LaunchedEffect(true) {
-                scope.launch { tower = TowerRepo(ctx).loadTower(gameId) }
-            }
-            tower?.let {
-                TowerScreen(
-                    navController = navController,
-                    snackbarHostState = snackbarHostState,
-                    tower = it
-                )
-            }
+            TowerScreen(
+                navigateToPlay = navigateToPlay,
+                towerId = backStackEntry.arguments?.getString("id")!!
+            )
         }
         composable("game/{id}/play") { backStackEntry ->
             val gameId = backStackEntry.arguments?.getString("id")!!
@@ -94,13 +92,13 @@ fun AppNavHost(
             tower?.let { PlayScreen(tower = it) }
         }
         composable("recent") {
-            RecentScreen(navController = navController)
+            RecentScreen(navigateToGame = navigateToGame)
         }
         composable("favorite") {
-            FavoriteScreen(navController = navController)
+            FavoriteScreen(navigateToGame = navigateToGame)
         }
         composable("offline") {
-            OfflineScreen(navController = navController)
+            OfflineScreen(navigateToGame = navigateToGame)
         }
     }
 }

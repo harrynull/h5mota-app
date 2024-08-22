@@ -1,5 +1,6 @@
 package tech.harrynull.h5mota.ui.views
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -26,52 +27,89 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavHostController
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import tech.harrynull.h5mota.api.MotaApi
 import tech.harrynull.h5mota.models.Tower
 
+data class HomeScreenUiState(
+    val towers: List<Tower> = listOf(),
+    val sortMode: MotaApi.SortMode = MotaApi.SortMode.Hot,
+    val pagesLoaded: Int = 0,
+    val isRefreshing: Boolean = false,
+)
+
+class HomeScreenViewModel : ViewModel() {
+    private val _uiState = MutableStateFlow(HomeScreenUiState())
+    val uiState: StateFlow<HomeScreenUiState> = _uiState.asStateFlow()
+
+    fun load(context: Context, onFailure: suspend (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                _uiState.update { currentState ->
+                    currentState.copy(isRefreshing = true)
+                }
+                val newTowers = MotaApi().list(
+                    ctx = context,
+                    page = uiState.value.pagesLoaded + 1,
+                    sortMode = uiState.value.sortMode
+                ).towers
+                _uiState.update { currentState ->
+                    currentState.copy(
+                        towers = currentState.towers + newTowers,
+                        pagesLoaded = currentState.pagesLoaded + 1,
+                        isRefreshing = false
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("HomeScreen", "Failed to load towers", e)
+                onFailure("加载失败: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    fun clearLoaded() {
+        _uiState.update { currentState ->
+            currentState.copy(towers = listOf(), pagesLoaded = 0)
+        }
+    }
+
+    fun setSortMode(mode: MotaApi.SortMode) {
+        _uiState.update { currentState ->
+            currentState.copy(sortMode = mode)
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    navController: NavHostController,
+    navigateToGame: (Tower) -> Unit,
+    viewModel: HomeScreenViewModel = viewModel(),
     snackbarHostState: SnackbarHostState,
 ) {
-    val scope = rememberCoroutineScope()
-    var towers by remember { mutableStateOf(listOf<Tower>()) }
-    var isRefreshing by remember { mutableStateOf(false) }
-    var pagesLoaded by remember { mutableStateOf(0) }
-    var sortMode by remember { mutableStateOf(MotaApi.SortMode.Hot) }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     val ctx = LocalContext.current
 
-    suspend fun load() {
-        try {
-            // first load
-            Log.i("HomeScreen", "Loading page ${pagesLoaded + 1}")
-            if (pagesLoaded == 0) {
-                towers =
-                    MotaApi().list(ctx = ctx, page = 1, sortMode = sortMode).towers.toMutableList()
-            } else {
-                towers += MotaApi().list(
-                    ctx = ctx,
-                    page = pagesLoaded + 1,
-                    sortMode = sortMode
-                ).towers
-            }
-            pagesLoaded++
-        } catch (e: Exception) {
-            Log.e("HomeScreen", "Failed to load towers", e)
-            snackbarHostState.showSnackbar("加载失败: ${e.localizedMessage}")
+    fun HomeScreenViewModel.load() {
+        viewModel.load(ctx) { message ->
+            snackbarHostState.showSnackbar(message)
         }
     }
+
     // observe list scrolling
     val reachedBottom: Boolean by remember {
         derivedStateOf {
@@ -82,24 +120,18 @@ fun HomeScreen(
 
     // load more if scrolled to bottom
     LaunchedEffect(reachedBottom) {
-        if (reachedBottom) load()
+        if (reachedBottom) viewModel.load()
     }
 
     LaunchedEffect(true) {
-        scope.launch {
-            pagesLoaded = 0
-            load()
-        }
+        if (uiState.towers.isEmpty() && !uiState.isRefreshing) viewModel.load()
     }
 
     PullToRefreshBox(
-        isRefreshing = isRefreshing,
+        isRefreshing = uiState.isRefreshing,
         onRefresh = {
-            scope.launch {
-                isRefreshing = true
-                load()
-                isRefreshing = false
-            }
+            viewModel.clearLoaded()
+            viewModel.load()
         },
     ) {
         LazyColumn(state = listState) {
@@ -124,7 +156,7 @@ fun HomeScreen(
                             modifier = Modifier.padding(start = 8.dp)
                         ) {
                             Text(
-                                sortMode.displayName,
+                                uiState.sortMode.displayName,
                                 style = MaterialTheme.typography.titleLarge
                             )
                             Icon(
@@ -136,12 +168,10 @@ fun HomeScreen(
                             MotaApi.SortMode.entries.forEach { mode ->
                                 DropdownMenuItem(
                                     onClick = {
-                                        sortMode = mode
+                                        viewModel.setSortMode(mode)
                                         expanded = false
-                                        scope.launch {
-                                            pagesLoaded = 0
-                                            load()
-                                        }
+                                        viewModel.clearLoaded()
+                                        viewModel.load()
                                     }, text = {
                                         Text(mode.displayName)
                                     })
@@ -150,8 +180,8 @@ fun HomeScreen(
                     }
                 }
             }
-            items(towers, key = { tower -> tower.name }) { tower ->
-                GameBox(navController, tower)
+            items(uiState.towers, key = { tower -> tower.name }) { tower ->
+                GameBox(navigateToGame, tower)
             }
         }
     }

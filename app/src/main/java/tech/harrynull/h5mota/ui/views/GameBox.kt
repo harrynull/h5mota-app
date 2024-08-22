@@ -23,23 +23,29 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import tech.harrynull.h5mota.R
 import tech.harrynull.h5mota.models.Tower
 
+fun String.ensureShorterThan(maxLength: Int): String {
+    return if (this.length > maxLength) {
+        this.substring(0, maxLength - 1) + "…"
+    } else {
+        this
+    }
+}
 
 @Composable
-fun GameBox(navController: NavHostController, tower: Tower) {
+fun GameBox(navigateToGame: (Tower) -> Unit, tower: Tower) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
             .padding(horizontal = 16.dp, vertical = 16.dp),
         onClick = {
-            navController.navigate("game/${tower.name}")
+            navigateToGame(tower)
         }
     ) {
         Column {
@@ -102,7 +108,7 @@ fun GameBox(navController: NavHostController, tower: Tower) {
                     )
                 }
                 Text(
-                    text = tower.text,
+                    text = tower.text.ensureShorterThan(100),
                     modifier = Modifier.padding(vertical = 8.dp),
                     style = MaterialTheme.typography.bodyMedium
                 )
