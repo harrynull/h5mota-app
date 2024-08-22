@@ -70,7 +70,7 @@ class TowerRepo(private val ctx: Context) {
     suspend fun getStarred(): List<Tower> {
         return ctx.towerDataStore.data.map { pref ->
             (pref[StarredKey] ?: setOf()).map { pref[towerKey(it)]!!.parseToTower() }
-        }.first()
+        }.first().reversed()
     }
 
     suspend fun isStarred(tower: Tower): Boolean {

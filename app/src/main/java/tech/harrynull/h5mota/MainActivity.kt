@@ -93,7 +93,7 @@ fun AppNavHost(
             LaunchedEffect(true) {
                 scope.launch { tower = TowerRepo(ctx).loadTower(gameId) }
             }
-            tower?.let { PlayScreen(tower = it) }
+            tower?.let { PlayScreen(tower = it, snackbarHostState = snackbarHostState) }
         }
         composable("recent") {
             RecentScreen(navigateToGame = navigateToGame)
@@ -118,6 +118,9 @@ fun AppNavigationBar(navController: NavHostController) {
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+
+    // hide if landscape
+    if (LocalContext.current.resources.configuration.orientation == 2) return
 
     NavigationBar {
         items.forEach { item ->

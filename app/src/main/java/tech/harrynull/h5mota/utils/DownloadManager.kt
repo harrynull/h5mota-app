@@ -12,6 +12,8 @@ import java.util.zip.ZipFile
 class DownloadManager(private val context: Context) {
     private fun downloadRoot() = context.filesDir.resolve("towers")
 
+    fun saveRoot() = context.filesDir.resolve("saves")
+    
     fun download(tower: Tower, onProgress: (Int) -> Unit, onCompleted: () -> Unit) {
         val kDownloader = KDownloader.create(context)
         kDownloader.enqueue(
