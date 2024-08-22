@@ -120,15 +120,16 @@ fun AppNavigationBar(navController: NavHostController) {
             NavigationBarItem(
                 label = { Text(text = item.title) },
                 selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
-                icon = {
-                    Icon(
-                        imageVector = item.icon!!,
-                        contentDescription = item.title
-                    )
-                },
+                icon = { Icon(imageVector = item.icon!!, contentDescription = item.title) },
                 onClick = {
                     navController.navigate(item.route) {
+                        navController.graph.startDestinationRoute?.let { route ->
+                            popUpTo(route) {
+                                saveState = true
+                            }
+                        }
                         launchSingleTop = true
+                        restoreState = true
                     }
                 }
             )
@@ -148,9 +149,7 @@ class MainActivity : ComponentActivity() {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     snackbarHost = { SnackbarHost(snackbarHostState) },
-                    bottomBar = {
-                        AppNavigationBar(navController = navController)
-                    },
+                    bottomBar = { AppNavigationBar(navController = navController) },
                     contentWindowInsets = WindowInsets.navigationBars
                 ) { innerPadding ->
                     AppNavHost(
